@@ -66,4 +66,4 @@ Copy
 Edit
 
 ## Download the RL Model
-The RL-trained model ultimate_ensemble_v3.pth is too large for GitHub version control and is available in GitHub Releases. 
+The RL-trained model ultimate_ensemble_v3.pth is too large for GitHub version control and is available in GitHub Releases here - https://github.com/blahmin/MURA-DeepEnsembleV3-82.98/releases/tag/model
