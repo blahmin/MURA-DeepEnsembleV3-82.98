@@ -7,7 +7,6 @@ from tqdm import tqdm
 from sklearn.metrics import cohen_kappa_score, classification_report, confusion_matrix
 import sys
 
-# Add parent directory to path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
@@ -55,7 +54,6 @@ def evaluate_model():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    # Match normalization values with training
     transform = transforms.Compose([
         transforms.Resize((160, 160)),
         transforms.ToTensor(),
@@ -67,15 +65,15 @@ def evaluate_model():
     val_dataset = MURADataset(val_dir, transform=transform)
     val_loader = DataLoader(
         val_dataset, 
-        batch_size=32,  # Match training batch size
+        batch_size=32,  
         shuffle=False, 
         num_workers=2,
-        pin_memory=True  # Match training pin_memory setting
+        pin_memory=True 
     )
     
     print(f"Total validation samples: {len(val_dataset)}")
 
-    model = UltimateEnsembleModel(num_classes=2, beta=0.5).to(device)  # Match beta value
+    model = UltimateEnsembleModel(num_classes=2, beta=0.5).to(device)  
     checkpoint_path = r"C:\Users\blahm\PycharmProjects\Work\CNNXRAY\data\ultimate_ensemble_v3.pth"
     
     try:
@@ -136,7 +134,6 @@ def evaluate_model():
             all_preds.extend(predicted.cpu().numpy())
             all_labels.extend(labels.cpu().numpy())
 
-            # Clear memory
             del inputs, labels, outputs, predicted
             torch.cuda.empty_cache()
 
@@ -166,7 +163,6 @@ def evaluate_model():
         print(classification_report(part_labels[part], part_preds[part], 
                                  target_names=['Normal', 'Abnormal']))
 
-    # Save results
     save_path = os.path.join(os.path.dirname(val_dir), 'evaluation_results.txt')
     print(f"\nSaving detailed results to {save_path}")
     with open(save_path, 'w') as f:

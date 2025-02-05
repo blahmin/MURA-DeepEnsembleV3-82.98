@@ -15,26 +15,18 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
-# Import the Ultimate Ensemble Model (ultimate_ensemblev3)
 from ultimate_ensemblev3 import UltimateEnsembleModel
 
-#############################################
-# 1. Dataset Definition
-#############################################
+
 class MURADataset(torch.utils.data.Dataset):
     def __init__(self, root_dir, transform=None):
-        """
-        Args:
-            root_dir (str): Directory with subfolders for each body part (e.g., XR_ELBOW, XR_FINGER, etc.)
-            transform: torchvision transforms to apply.
-        """
+
         self.root_dir = root_dir
         self.transform = transform
         self.image_paths = []
         self.labels = []
         self.body_parts = []
 
-        # List subdirectories starting with "XR_"
         parts = [d for d in os.listdir(root_dir) if d.startswith('XR_')]
         print("\nDataset composition:")
         for body_part in parts:
@@ -45,7 +37,6 @@ class MURADataset(torch.utils.data.Dataset):
                     if file.lower().endswith(('.png', '.jpg', '.jpeg')):
                         full_path = os.path.join(root, file)
                         self.image_paths.append(full_path)
-                        # Determine label from folder naming convention; assume "positive" means abnormal (1)
                         label = 1 if 'positive' in root.lower() else 0
                         self.labels.append(label)
                         self.body_parts.append(body_part)
@@ -64,11 +55,8 @@ class MURADataset(torch.utils.data.Dataset):
         if self.transform:
             image = self.transform(image)
 
-        return image, label, body_part, img_path  # Return img_path for hard example sampling
+        return image, label, body_part, img_path  
 
-#############################################
-# 2. Helper Function: Load Misclassified File
-#############################################
 def load_misclassified(file_path):
     """
     Reads a text file (one image path per line) of misclassified samples.
@@ -86,16 +74,12 @@ def load_misclassified(file_path):
         print(f"Misclassified file not found at {file_path}")
     return misclassified_set
 
-#############################################
-# 3. Training and Validation Functions
-#############################################
 def train_one_epoch(model, train_loader, criterion, optimizer, scheduler, device, epoch_num, rl_loss_weight=0.1):
     model.train()
     running_loss = 0.0
     correct = 0
     total = 0
 
-    # Dictionaries to track per–body–part training accuracy
     part_correct = {}
     part_total = {}
 
@@ -104,13 +88,11 @@ def train_one_epoch(model, train_loader, criterion, optimizer, scheduler, device
         inputs, labels = inputs.to(device), labels.to(device)
         optimizer.zero_grad(set_to_none=True)
 
-        # Use the first body part in the batch as representative (for simplicity)
         final_pred, _ = model(inputs, body_parts[0])
         supervised_loss = criterion(final_pred, labels)
 
-        # Compute predictions and assign a simple reward: +1 for correct, -1 for incorrect.
         _, predicted = torch.max(final_pred, 1)
-        reward = (predicted == labels).float() * 2 - 1.0  # +1 for correct, -1 for incorrect
+        reward = (predicted == labels).float() * 2 - 1.0 
 
         try:
             rl_loss = model.compute_total_rl_loss(reward)
@@ -129,7 +111,6 @@ def train_one_epoch(model, train_loader, criterion, optimizer, scheduler, device
         total += labels.size(0)
         correct += (predicted == labels).sum().item()
 
-        # Update per–body–part metrics
         for i, part in enumerate(body_parts):
             if part not in part_correct:
                 part_correct[part] = 0
@@ -188,27 +169,22 @@ def validate(model, val_loader, criterion, device):
     part_accuracy = {part: 100 * part_correct[part] / part_total[part] for part in part_total}
     return epoch_loss, epoch_acc, part_accuracy
 
-#############################################
-# 4. Main Training Loop
-#############################################
 def main():
     start_time = time.time()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    # Hyperparameters
     batch_size = 32
     epochs = 100
     learning_rate = 1e-4
     num_classes = 2
-    rl_loss_weight = 0.1  # Weight for the RL loss component
+    rl_loss_weight = 0.1  
 
-    # Data directories (adjust these paths as needed)
-    train_dir = r"C:\Users\blahm\PycharmProjects\Work\CNNXRAY\data\train"
-    val_dir   = r"C:\Users\blahm\PycharmProjects\Work\CNNXRAY\data\valid"
-    misclassified_path = r"C:\Users\blahm\PycharmProjects\Work\CNNXRAY\misclassified.txt"
+    train_dir = r"train path"
+    val_dir   = r"valid path"
+    misclassified_path = r"misclassified.txt path"
 
-    # Data augmentation for training
+    # Data augmentation
     train_transform = transforms.Compose([
         transforms.Resize((160, 160)),
         transforms.RandomResizedCrop(160, scale=(0.8, 1.0)),
@@ -232,7 +208,6 @@ def main():
         transforms.RandomErasing(p=0.2, scale=(0.02, 0.2))
     ])
 
-    # Validation transforms
     val_transform = transforms.Compose([
         transforms.Resize((160, 160)),
         transforms.ToTensor(),
@@ -240,24 +215,20 @@ def main():
                              std=[0.229, 0.224, 0.225])
     ])
 
-    # Load misclassified file to get a set of hard examples
     misclassified_set = load_misclassified(misclassified_path)
 
-    # Initialize datasets
     train_dataset = MURADataset(train_dir, transform=train_transform)
     val_dataset   = MURADataset(val_dir, transform=val_transform)
 
-    # Create sample weights to oversample misclassified images
     sample_weights = []
     for path in train_dataset.image_paths:
         if path in misclassified_set:
-            sample_weights.append(2.0)  # Higher weight for misclassified images
+            sample_weights.append(2.0) 
         else:
             sample_weights.append(1.0)
 
     sampler = WeightedRandomSampler(sample_weights, num_samples=len(sample_weights), replacement=True)
 
-    # DataLoaders
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,
@@ -277,11 +248,8 @@ def main():
     print(f"Training samples: {len(train_dataset)}")
     print(f"Validation samples: {len(val_dataset)}")
 
-    # Initialize the Ultimate Ensemble Model (v3)
     model = UltimateEnsembleModel(num_classes=num_classes, beta=0.5).to(device)
 
-    # --- Pretrained Weight Loading ---
-    # We choose to load from ultimate_ensemble_RAAAH.pth (v1) since it achieved 82.4% val accuracy.
     pretrained_path = os.path.join(os.path.dirname(train_dir), "ultimate_ensemble_RAAAH.pth")
     if os.path.exists(pretrained_path):
         print("Loading pretrained weights from ultimate_ensemble_RAAAH.pth ...")
@@ -294,7 +262,6 @@ def main():
     else:
         print("No pretrained weights found, training from scratch.")
 
-    # Loss function, optimizer, and learning rate scheduler
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=0.01)
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
@@ -327,7 +294,6 @@ def main():
         for part, acc in val_part_acc.items():
             print(f"  {part}: {acc:.2f}%")
 
-        # Save best model checkpoint under ultimate_ensemble_v3.pth
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             checkpoint = {
