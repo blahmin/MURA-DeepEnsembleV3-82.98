@@ -1,0 +1,34 @@
+Evaluation Results
+=================
+Overall Accuracy: 82.98%
+Cohen's Kappa Score: 0.6565
+Average Gate Value: 0.4051
+
+
+XR_ELBOW:
+Accuracy: 86.45%
+Total: 465, Correct: 402
+
+XR_FINGER:
+Accuracy: 81.34%
+Total: 461, Correct: 375
+
+XR_FOREARM:
+Accuracy: 82.00%
+Total: 300, Correct: 246
+
+XR_HAND:
+Accuracy: 80.87%
+Total: 460, Correct: 372
+
+XR_HUMERUS:
+Accuracy: 85.07%
+Total: 288, Correct: 245
+
+XR_SHOULDER:
+Accuracy: 77.44%
+Total: 563, Correct: 436
+
+XR_WRIST:
+Accuracy: 87.41%
+Total: 659, Correct: 576
